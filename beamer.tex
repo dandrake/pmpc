@@ -1,0 +1,77 @@
+\documentclass{beamer}
+\usepackage{newfile}
+\usepackage{calc}
+
+\title[]{title goes here}
+\subtitle{what a lovely subtitle}
+
+% speaker notes
+
+% depends on newfile package
+\newoutputstream{speakernotes}
+\openoutputfile{\jobname.notes.xml}{speakernotes}
+
+% necessary top bits
+\addtostream{speakernotes}{<notes>}
+
+\usepackage{verbatim}
+
+\newcounter{slide}
+
+\makeatletter
+
+% need the calc package because it works best to put the speakernotes
+% env *after* a frame, and by then the page counter has been
+% incremented. So we subtract 1 from that so that the note tags in the
+% xml file correspond to the (1-based) page number in the PDF.
+\newenvironment{speakernote}{%
+ \@bsphack\setcounter{slide}{\thepage-1}%
+\addtostream{speakernotes}{<note slide="\theslide">}%
+ \let\do\@makeother\dospecials\catcode`\^^M\active
+ \def\verbatim@processline{\addtostream{speakernotes}{\the\verbatim@line}}%
+ \verbatim@start}%
+{\addtostream{speakernotes}{</note>}\@esphack}
+\makeatother
+
+% close file when we're done
+\AtEndDocument{\addtostream{speakernotes}{</notes>}\closeoutputstream{speakernotes}}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+\begin{speakernote}
+  title page note
+\end{speakernote}
+
+% aaa
+\begin{frame}[label=fornexttime] \frametitle{first frame with regular content}
+
+here's stuff on page 1
+\end{frame}
+\begin{speakernote}
+  oh my
+
+  some notes. verbatim: \foo # & \\ $ 
+\end{speakernote}
+% $ 
+
+\begin{frame} \frametitle{xyz}
+lorem ipsum
+
+\pause
+
+some text for the second part of the frame
+\end{frame}
+\begin{speakernote}
+  some stuff after the frame
+\end{speakernote}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% eval: (folding-mode)
+%%% TeX-PDF-mode: t
+%%% End: 
