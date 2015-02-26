@@ -30,7 +30,8 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from Tkinter import Tk, Frame, Checkbutton, Message, Label
 from Tkinter import IntVar, BOTH
-import PIL
+import PIL.ImageTk
+import PIL.Image
 from cairo import ImageSurface, Context, FORMAT_ARGB32
 import subprocess
 import poppler
@@ -53,7 +54,9 @@ class Presenter(Frame):
         self.notes = parse_notes(self.fn + '.notes.xml')
         self.pdf = self.fn + '.pdf'
         self.slide = 0
-        self.nslides = get_n_pages(self.pdf)
+        self.document = poppler.document_new_from_file('file://' + os.path.abspath(self.pdf), None)
+        self.nslides = self.document.get_n_pages()
+        self.current_page = self.document.get_page(self.slide + 1)
         self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
         #print 'my fn is', self.fn
         #print 'my notes are' , self.notes
@@ -71,16 +74,39 @@ class Presenter(Frame):
         self.parent.title('Presenting {}.pdf'.format(fn))
 
         self.notes[0] = "\nDo 'f', then 'H' to fullscreen mupdf.\n" + self.notes[0]
-        self.note = Message(self, text="{}:".format(self.slide + 1) + self.notes[0], font=('Helvetica', self.textsize, 'bold'))
+        self.note = Message(self, text="{}/{}:".format(self.slide + 1, self.nslides) + self.notes[0], font=('Helvetica', self.textsize, 'bold'))
+
+        w = 300
+        h = 200
+        self.surface = ImageSurface(FORMAT_ARGB32, w, h)
+        self.context = Context(self.surface)
+        self.current_page.render(self.context)
+        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", (w, h), self.surface.get_data(), "raw", "BGRA", 0, 1))
+        self.label = Label(self, image=self._image_ref)
+        self.label.pack()
+
         self.shownote()
         self.focus_get()
         self.bind_all("<Key>", self.onKeyPressed)
-
+        
     def shownote(self):
         self.note.pack_forget()
         self.note = Message(self, text='{}:\n'.format(self.slide + 1) + self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'))
         # the pack stuff is dangerously close to cargo cult programming...gotta understand this
         self.note.pack()
+
+        if self.slide < self.nslides - 1:
+            self.current_page = self.document.get_page(self.slide + 1)
+        else:
+            # just redo the final slide
+            self.current_page = self.document.get_page(self.slide)
+
+        self.current_page.render(self.context)
+        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", (300,200), self.surface.get_data(), "raw", "BGRA", 0, 1))
+        self.label.pack_forget()
+        self.label = Label(self, image=self._image_ref)
+        self.label.pack()
+
         self.pack(fill=BOTH, expand=1)
 
     def onKeyPressed(self, e): 
