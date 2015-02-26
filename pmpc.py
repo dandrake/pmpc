@@ -14,6 +14,7 @@ drive evince with subprocess running xdotool
 
 http://zetcode.com/gui/tkinter/widgets/
 
+nope, let's do mupdf; evince seems to not listen to keypresses when the window isn't focused (as will always be the case here), but mupdf does.
 
 """
 
@@ -25,6 +26,8 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from Tkinter import Tk, Frame, Checkbutton, Message
 from Tkinter import IntVar, BOTH
+import subprocess
+
 
 def parse_notes(fn):
     ret = defaultdict(lambda: '')
@@ -41,11 +44,12 @@ class Presenter(Frame):
         self.notes = parse_notes(self.fn + '.notes.xml')
         self.pdf = self.fn + '.pdf'
         self.slide = 0
+        self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
         print 'my fn is', self.fn
         print 'my notes are' , self.notes
         # FIXME get number of pages
 
-        self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'Space']
+        self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'space']
         self.prevkeys = ['k', 'K', 'Left', 'Up', 'Prior'] # backspace
 
         Frame.__init__(self, parent)
@@ -55,13 +59,14 @@ class Presenter(Frame):
         # could get pdf title via poppler?
         self.parent.title('Presenting {}.pdf'.format(fn))
 
+        self.note = Message(self, text='{}:\n'.format(self.slide), font=('Helvetica', self.textsize, 'bold'))
         self.shownote()
         self.focus_get()
         self.bind_all("<Key>", self.onKeyPressed)
 
     def shownote(self):
-        self.msg.pack_forget()
-        self.note = Message(self, text=self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'))
+        self.note.pack_forget()
+        self.note = Message(self, text='{}:\n'.format(self.slide) + self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'))
         # the pack stuff is dangerously close to cargo cult programming...gotta understand this
         self.note.pack()
         self.pack(fill=BOTH, expand=1)
@@ -69,68 +74,30 @@ class Presenter(Frame):
     def onKeyPressed(self, e): 
         key = e.keysym
         print key
-        if key == '+':
-            self.size += 3
+        if key == 'plus':
+            self.textsize += 3
             self.shownote()
-        if key == '-':
-            self.size -= 3
+        if key == 'minus':
+            self.textsize -= 3
             self.shownote()
-        if key in self.nextkeys():
+        if key in self.nextkeys:
             self.slide += 1
-            # FIXME also advanced evince and redo preview
+            # no spaces in args, so okay to just .split()
+            subprocess.call('/usr/bin/xdotool search mupdf key Next'.split())
             self.shownote()
-        if key in self.prevkeys() and self.slide > 0:
+        if key in self.prevkeys and self.slide > 0:
             self.slide -= 1
+            subprocess.call('/usr/bin/xdotool search mupdf key Prior'.split())
             self.shownote()
-
-class Example(Frame):
-  
-    def __init__(self, parent):
-        Frame.__init__(self, parent)   
-         
-        self.parent = parent        
-        self.initUI()
-        
-    def initUI(self):
-      
-        self.parent.title("Checkbutton")
-
-        self.size = 20
-
-        self.msg = Message(self, text="oh my a message", font=("Helvetica", self.size, "bold"))
-        self.msg.pack()
-
-        self.pack(fill=BOTH, expand=1)
-        self.var = IntVar()
-        
-        self.focus_get()
-        
-        # cb = Checkbutton(self, text="Show title",
-        #     variable=self.var, command=self.onClick)
-        # cb.select()
-        # cb.place(x=50, y=50)
-
-
-#        msg.select()
-        
-        
-
-    # def onClick(self):
-       
-    #     if self.var.get() == 1:
-    #         self.master.title("Checkbutton")
-    #     else:
-    #         self.master.title("")
-
- 
 
 def main():
     root = Tk()
     root.geometry("250x150+300+300")
-    app = Example(root)
+    #app = Example(root)
+    app = Presenter(sys.argv[1], root)
     root.mainloop()  
 
 
 if __name__ == '__main__':
-    #main()  
-    Presenter(sys.argv[1])
+    main()  
+
