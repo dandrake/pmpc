@@ -20,6 +20,10 @@ http://zetcode.com/gui/tkinter/widgets/
 nope, let's do mupdf; evince seems to not listen to keypresses when the window isn't focused (as will always be the case here), but mupdf does.
 
 cairo & Tkinter: http://stackoverflow.com/a/26189022
+
+colors stolen from http://ethanschoonover.com/solarized
+
+
 """
 
 # https://docs.python.org/2/library/xml.etree.elementtree.html#module-xml.etree.ElementTree
@@ -29,7 +33,8 @@ import os.path
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from Tkinter import Tk, Frame, Checkbutton, Message, Label
-from Tkinter import IntVar, BOTH
+from Tkinter import IntVar, BOTH, LEFT, RIGHT, Y
+import Tkinter
 import PIL.ImageTk
 import PIL.Image
 from cairo import ImageSurface, Context, FORMAT_ARGB32
@@ -45,9 +50,6 @@ def parse_notes(fn):
         ret[0] = 'no file {}!'.format(fn)
     return ret
 
-def get_n_pages(fn):
-    return poppler.document_new_from_file('file://' + os.path.abspath(fn), None).get_n_pages()
-
 class Presenter(Frame):
     def __init__(self, fn, parent):
         self.fn = os.path.splitext(fn)[0]
@@ -57,31 +59,27 @@ class Presenter(Frame):
         self.document = poppler.document_new_from_file('file://' + os.path.abspath(self.pdf), None)
         self.nslides = self.document.get_n_pages()
         self.current_page = self.document.get_page(self.slide + 1)
-        self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
-        #print 'my fn is', self.fn
-        #print 'my notes are' , self.notes
+        self.slide_size = tuple(int(_) for _ in self.current_page.get_size())
+        #self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
 
         self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'space']
         self.prevkeys = ['k', 'K', 'Left', 'Up', 'Prior', 'BackSpace']
-        # store 
+        # store digits so you can re-sync slides & pdf
         self.digits = ''
 
-        Frame.__init__(self, parent)
+        Frame.__init__(self, parent, background='#002b36')
         self.parent = parent
         self.textsize = 20
 
-        # could get pdf title via poppler?
-        self.parent.title('Presenting {}.pdf'.format(fn))
+        self.parent.title('Presenting {}'.format(self.pdf))
 
         self.notes[0] = "\nDo 'f', then 'H' to fullscreen mupdf.\n" + self.notes[0]
-        self.note = Message(self, text="{}/{}:".format(self.slide + 1, self.nslides) + self.notes[0], font=('Helvetica', self.textsize, 'bold'))
+        self.note = Message(self, text="{}/{}:".format(self.slide + 1, self.nslides) + self.notes[0], font=('Helvetica', self.textsize, 'bold'), background='#008800')
 
-        w = 300
-        h = 200
-        self.surface = ImageSurface(FORMAT_ARGB32, w, h)
+        self.surface = ImageSurface(FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
         self.context = Context(self.surface)
         self.current_page.render(self.context)
-        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", (w, h), self.surface.get_data(), "raw", "BGRA", 0, 1))
+        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
         self.label = Label(self, image=self._image_ref)
         self.label.pack()
 
@@ -90,23 +88,21 @@ class Presenter(Frame):
         self.bind_all("<Key>", self.onKeyPressed)
         
     def shownote(self):
+        print 'width:', self.winfo_width()
         self.note.pack_forget()
-        self.note = Message(self, text='{}:\n'.format(self.slide + 1) + self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'))
-        # the pack stuff is dangerously close to cargo cult programming...gotta understand this
-        self.note.pack()
+        self.note = Message(self, text='{}/{}:\n'.format(self.slide + 1, self.nslides) + self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'), background='#002b36', fg='#eee8d5', width=500, anchor='nw')
+        self.note.pack(side=LEFT, fill=BOTH, anchor='nw', expand=1)
 
         if self.slide < self.nslides - 1:
             self.current_page = self.document.get_page(self.slide + 1)
+            self.current_page.render(self.context)
+            self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
+            self.label.pack_forget()
+            self.label = Label(self, image=self._image_ref)
+            self.label.pack(side=RIGHT, anchor='n')
         else:
-            # just redo the final slide
-            self.current_page = self.document.get_page(self.slide)
-
-        self.current_page.render(self.context)
-        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", (300,200), self.surface.get_data(), "raw", "BGRA", 0, 1))
-        self.label.pack_forget()
-        self.label = Label(self, image=self._image_ref)
-        self.label.pack()
-
+            # no slide to preview...don't display anything
+            self.label.pack_forget()
         self.pack(fill=BOTH, expand=1)
 
     def onKeyPressed(self, e): 
@@ -140,15 +136,15 @@ class Presenter(Frame):
                 self.slide = n
                 self.shownote()
             self.digits = ''
-            
+        # state 4 is ctrl held down: http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/event-handlers.html
+        if key == 'w' and e.state == 4:
+            sys.exit(0)
 
 def main():
     root = Tk()
-    root.geometry("250x150+300+300")
-    #app = Example(root)
+    root.geometry("800x600+100+100")
     app = Presenter(sys.argv[1], root)
     root.mainloop()  
-
 
 if __name__ == '__main__':
     main()  
