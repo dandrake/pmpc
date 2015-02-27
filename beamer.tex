@@ -22,10 +22,10 @@
 
 % need the calc package because it works best to put the speakernotes
 % env *after* a frame, and by then the page counter has been
-% incremented. So we subtract 1 from that so that the note tags in the
-% xml file correspond to the (1-based) page number in the PDF.
+% incremented. So we subtract 2 from that so that the note tags in the
+% xml file correspond to the (0-based) page number in the PDF.
 \newenvironment{speakernote}{%
- \@bsphack\setcounter{slide}{\thepage-1}%
+ \@bsphack\setcounter{slide}{\thepage-2}%
 \addtostream{speakernotes}{<note slide="\theslide">}%
  \let\do\@makeother\dospecials\catcode`\^^M\active
  \def\verbatim@processline{\addtostream{speakernotes}{\the\verbatim@line}}%
@@ -42,7 +42,7 @@
   \titlepage
 \end{frame}
 \begin{speakernote}
-  title page note
+title page note
 \end{speakernote}
 
 % aaa
@@ -51,9 +51,10 @@
 here's stuff on page 1
 \end{frame}
 \begin{speakernote}
-  oh my
+oh my
 
-  some notes. verbatim: \foo # & \\ $ 
+some notes. yes, this is verbatim: \foo # \\ $ 
+but Python's xml parser doesn't like ampersands
 \end{speakernote}
 % $ 
 

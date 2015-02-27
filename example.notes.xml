@@ -1,20 +1,19 @@
 <!--
 Entire thing enclosed in <notes>.
 
-Each <note> needs a slide attribute which corresponds to the 1-based
-page number in the PDF. Might make that 0-based in the future.
-
+Each <note> needs a slide attribute which corresponds to the 0-based
+page number in the PDF.
 -->
 <notes>
-<note slide="2">
-  title page note
+<note slide="0">
+title page note
 </note>
-<note slide="3">
-  oh my
+<note slide="2">
+oh my
 
-  some notes.
+some notes.
 </note>
 <note slide="5">
-  some stuff after the frame
+yet still more notes.
 </note>
 </notes>

@@ -25,32 +25,31 @@ colors stolen from http://ethanschoonover.com/solarized
 
 
 """
-
-# https://docs.python.org/2/library/xml.etree.elementtree.html#module-xml.etree.ElementTree
-
 import sys
 import os.path
 import xml.etree.ElementTree as ET
-from collections import defaultdict
-from Tkinter import Tk, Frame, Checkbutton, Message, Label
-from Tkinter import IntVar, BOTH, LEFT, RIGHT, Y
+import collections
 import Tkinter
-import PIL.ImageTk
-import PIL.Image
-from cairo import ImageSurface, Context, FORMAT_ARGB32
+import PIL.Image, PIL.ImageTk
+import cairo
 import subprocess
 import poppler
 
 def parse_notes(fn):
-    ret = defaultdict(lambda: '')
+    ret = collections.defaultdict(lambda: '')
     try:
-        ret.update((int(note.attrib['slide']), note.text)
-                   for note in ET.parse(fn).getroot())
+        notes = ET.parse(fn).getroot()
     except IOError:
-        ret[0] = 'no file {}!'.format(fn)
+        ret[0] = '\nno file {}!'.format(fn)
+        return ret
+    # normalize the notes: each starts with one \n. Might experiment
+    # with: remove common leading whitespace, remove single \n's (let
+    # the presenter do the line breaks). (But are those two incompatible?)
+    for note in notes:
+        ret[int(note.attrib['slide'])] = '\n' + note.text.lstrip('\n')
     return ret
 
-class Presenter(Frame):
+class Presenter(Tkinter.Frame):
     def __init__(self, fn, parent):
         fn = os.path.splitext(fn)[0]
         self.notes = parse_notes(fn + '.notes.xml')
@@ -61,17 +60,15 @@ class Presenter(Frame):
         self.nslides = self.document.get_n_pages()
         self.next_page = self.document.get_page(self.slide + 1)
         self.slide_size = tuple(int(_) for _ in self.next_page.get_size())
-        #self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
+        self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
 
         self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'space']
         self.prevkeys = ['k', 'K', 'Left', 'Up', 'Prior', 'BackSpace']
         # store digits so you can re-sync slides & pdf
         self.digits = ''
 
-        Frame.__init__(self, parent, background='#002b36')
-        #self.parent = parent
+        Tkinter.Frame.__init__(self, parent, background='#002b36')
         self.textsize = 20
-        #self.parent.title('Presenting {}'.format(self.pdf))
         parent.title('Presenting {}'.format(self.pdf))
 
         self.notes[0] = "\nDo 'f', then 'H' to fullscreen mupdf.\n" + self.notes[0]
@@ -79,11 +76,11 @@ class Presenter(Frame):
         self.note.set('1/{}: '.format(self.nslides) + self.notes[0])
         self.do_msg()
 
-        self.surface = ImageSurface(FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
-        self.context = Context(self.surface)
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
+        self.context = cairo.Context(self.surface)
         # just a dummy for now, we'll do this for real in shownote()
-        self.label = Label(self)
-        self.label.pack()
+        # self.label = Label(self)
+        # self.label.pack()
 
         self.shownote()
         self.focus_get()
@@ -100,32 +97,36 @@ class Presenter(Frame):
             pass
         width = max(500, self.winfo_width() - self.slide_size[0] - 10)
         print width
-        self.msg = Message(self, textvariable=self.note,
-                            font=('Helvetica', self.textsize, 'bold'),
-                            background='#002b36',
-                            fg='#eee8d5',
-                            width=width,
-                            anchor='nw')
+        self.msg = Tkinter.Message(self, textvariable=self.note,
+                                   font=('Helvetica', self.textsize, 'bold'),
+                                   background='#002b36',
+                                   fg='#eee8d5',
+                                   width=width,
+                                   anchor='nw')
         print self.winfo_width()
-        self.msg.pack(side=LEFT, fill=BOTH, anchor='nw', expand=1)
+        self.msg.pack(side=Tkinter.LEFT, fill=Tkinter.BOTH, anchor='nw', expand=1)
 
     def shownote(self):
         # TODO: on window resize, adjust width of the Message 
         # print 'width:', self.winfo_width()
         self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.slide])
 
-        self.label.pack_forget()
+        try:
+            self.label.pack_forget()
+        except AttributeError:
+            # first time, just keep going
+            pass
         if self.slide < self.nslides - 1:
             self.next_page = self.document.get_page(self.slide + 1)
             self.next_page.render(self.context)
             self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
 
-            self.label = Label(self, image=self._image_ref)
-            self.label.pack(side=RIGHT, anchor='n')
+            self.label = Tkinter.Label(self, image=self._image_ref)
+            self.label.pack(side=Tkinter.RIGHT, anchor='n')
         else:
             # no slide to preview...don't display anything
             pass
-        self.pack(fill=BOTH, expand=1)
+        self.pack(fill=Tkinter.BOTH, expand=1)
 
     def onKeyPressed(self, e): 
         key = e.keysym
@@ -165,11 +166,10 @@ class Presenter(Frame):
             sys.exit(0)
 
 def main():
-    root = Tk()
+    root = Tkinter.Tk()
     root.geometry("800x600+100+100")
     app = Presenter(sys.argv[1], root)
     root.mainloop()  
 
 if __name__ == '__main__':
     main()  
-
