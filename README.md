@@ -12,3 +12,5 @@ being projected and another with speaker notes and slide previews.
 put all the LaTeX support stuff in a .sty file
 
 eventually put a timer on the presentation screen too
+
+notes for slides with overlays only appear for last overlay
