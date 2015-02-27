@@ -52,14 +52,15 @@ def parse_notes(fn):
 
 class Presenter(Frame):
     def __init__(self, fn, parent):
-        self.fn = os.path.splitext(fn)[0]
-        self.notes = parse_notes(self.fn + '.notes.xml')
-        self.pdf = self.fn + '.pdf'
+        fn = os.path.splitext(fn)[0]
+        self.notes = parse_notes(fn + '.notes.xml')
+        self.pdf = fn + '.pdf'
+
         self.slide = 0
         self.document = poppler.document_new_from_file('file://' + os.path.abspath(self.pdf), None)
         self.nslides = self.document.get_n_pages()
-        self.current_page = self.document.get_page(self.slide + 1)
-        self.slide_size = tuple(int(_) for _ in self.current_page.get_size())
+        self.next_page = self.document.get_page(self.slide + 1)
+        self.slide_size = tuple(int(_) for _ in self.next_page.get_size())
         #self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
 
         self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'space']
@@ -68,41 +69,62 @@ class Presenter(Frame):
         self.digits = ''
 
         Frame.__init__(self, parent, background='#002b36')
-        self.parent = parent
+        #self.parent = parent
         self.textsize = 20
-
-        self.parent.title('Presenting {}'.format(self.pdf))
+        #self.parent.title('Presenting {}'.format(self.pdf))
+        parent.title('Presenting {}'.format(self.pdf))
 
         self.notes[0] = "\nDo 'f', then 'H' to fullscreen mupdf.\n" + self.notes[0]
-        self.note = Message(self, text="{}/{}:".format(self.slide + 1, self.nslides) + self.notes[0], font=('Helvetica', self.textsize, 'bold'), background='#008800')
+        self.note = Tkinter.StringVar()
+        self.note.set('1/{}: '.format(self.nslides) + self.notes[0])
+        self.do_msg()
 
         self.surface = ImageSurface(FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
         self.context = Context(self.surface)
-        self.current_page.render(self.context)
-        self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
-        self.label = Label(self, image=self._image_ref)
+        # just a dummy for now, we'll do this for real in shownote()
+        self.label = Label(self)
         self.label.pack()
 
         self.shownote()
         self.focus_get()
         self.bind_all("<Key>", self.onKeyPressed)
-        
-    def shownote(self):
-        print 'width:', self.winfo_width()
-        self.note.pack_forget()
-        self.note = Message(self, text='{}/{}:\n'.format(self.slide + 1, self.nslides) + self.notes[self.slide], font=('Helvetica', self.textsize, 'bold'), background='#002b36', fg='#eee8d5', width=500, anchor='nw')
-        self.note.pack(side=LEFT, fill=BOTH, anchor='nw', expand=1)
 
+    def do_msg(self):
+        """
+        set up and pack the Message; only necessary when text size changes
+        """
+        try:
+            self.msg.pack_forget()
+        except AttributeError:
+            # first time, just keep going
+            pass
+        width = max(500, self.winfo_width() - self.slide_size[0] - 10)
+        print width
+        self.msg = Message(self, textvariable=self.note,
+                            font=('Helvetica', self.textsize, 'bold'),
+                            background='#002b36',
+                            fg='#eee8d5',
+                            width=width,
+                            anchor='nw')
+        print self.winfo_width()
+        self.msg.pack(side=LEFT, fill=BOTH, anchor='nw', expand=1)
+
+    def shownote(self):
+        # TODO: on window resize, adjust width of the Message 
+        # print 'width:', self.winfo_width()
+        self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.slide])
+
+        self.label.pack_forget()
         if self.slide < self.nslides - 1:
-            self.current_page = self.document.get_page(self.slide + 1)
-            self.current_page.render(self.context)
+            self.next_page = self.document.get_page(self.slide + 1)
+            self.next_page.render(self.context)
             self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
-            self.label.pack_forget()
+
             self.label = Label(self, image=self._image_ref)
             self.label.pack(side=RIGHT, anchor='n')
         else:
             # no slide to preview...don't display anything
-            self.label.pack_forget()
+            pass
         self.pack(fill=BOTH, expand=1)
 
     def onKeyPressed(self, e): 
@@ -110,9 +132,11 @@ class Presenter(Frame):
         print key
         if key == 'plus':
             self.textsize += 3
+            self.do_msg()
             self.shownote()
         if key == 'minus':
             self.textsize -= 3
+            self.do_msg()
             self.shownote()
         if key in self.nextkeys and self.slide < self.nslides - 1:
             self.slide += 1
