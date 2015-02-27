@@ -1,7 +1,5 @@
 """display speaker notes
 
-use poppler to render the pages
-
 +/- keys to adjust text size
 
 make text white on dark gray background
@@ -49,15 +47,57 @@ def parse_notes(fn):
         ret[int(note.attrib['slide'])] = '\n' + note.text.lstrip('\n')
     return ret
 
+def parse_indices_labels(labels):
+    """
+    For slides with overlays, we have multiple pages in the pdf but only
+    one note. So we need a mapping from indices to the indices that you
+    actually get in the notes. For example:
+
+    page index, label:   
+    0 1
+    1 2
+    2 3
+    3 3
+    4 4
+    5 5
+    6 5
+    7 5
+
+    The notes file has notes for slides 0, 1, 3, 4, 7. The pattern is
+    reasonably clear: say page index k has label L(k). We want a mapping
+    from k to the maximum index in the set L^(-1)(L(k)). (I'm a
+    mathematician, thinking in terms of functions, sets, and inverses is
+    natural.)
+
+    The code below does that. Just give it a list of labels so that L(k)
+    = labels[k] and it returns a dictionary. For the above situation,
+    the dictionary is
+
+    {0: 0, 1: 1, 2: 3, 3: 3, 4: 4, 5: 7, 6: 7, 7: 7}.
+    """
+    label_to_index = {}
+    for n, label in enumerate(labels):
+        label_to_index[label] = n
+    # now we have a mapping from page labels to the last page index with that page label.
+    # compose that with the index->label mapping:
+    index_to_note_num = {}
+    for n, label in enumerate(labels):
+        index_to_note_num[n] = label_to_index[label]
+    return index_to_note_num
+
 class Presenter(Tkinter.Frame):
     def __init__(self, fn, parent):
         fn = os.path.splitext(fn)[0]
         self.notes = parse_notes(fn + '.notes.xml')
+
         self.pdf = fn + '.pdf'
 
         self.slide = 0
         self.document = poppler.document_new_from_file('file://' + os.path.abspath(self.pdf), None)
         self.nslides = self.document.get_n_pages()
+        self.index_to_note_num = parse_indices_labels([
+            self.document.get_page(n).get_label() for n in range(self.nslides)])
+
         self.next_page = self.document.get_page(self.slide + 1)
         self.slide_size = tuple(int(_) for _ in self.next_page.get_size())
         self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
@@ -78,9 +118,6 @@ class Presenter(Tkinter.Frame):
 
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
         self.context = cairo.Context(self.surface)
-        # just a dummy for now, we'll do this for real in shownote()
-        # self.label = Label(self)
-        # self.label.pack()
 
         self.shownote()
         self.focus_get()
@@ -109,7 +146,7 @@ class Presenter(Tkinter.Frame):
     def shownote(self):
         # TODO: on window resize, adjust width of the Message 
         # print 'width:', self.winfo_width()
-        self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.slide])
+        self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.index_to_note_num[self.slide]])
 
         try:
             self.label.pack_forget()
