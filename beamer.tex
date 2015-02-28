@@ -24,6 +24,9 @@
 % env *after* a frame, and by then the page counter has been
 % incremented. So we subtract 2 from that so that the note tags in the
 % xml file correspond to the (0-based) page number in the PDF.
+
+% if you're using some TeX thing where the speakernote environment is
+% placed on the same page as the slide, you'd change the "-2" to "-1".
 \newenvironment{speakernote}{%
  \@bsphack\setcounter{slide}{\thepage-2}%
 \addtostream{speakernotes}{<note slide="\theslide">}%
@@ -45,18 +48,17 @@
 title page note
 \end{speakernote}
 
-% aaa
-\begin{frame}[label=fornexttime] \frametitle{first frame with regular content}
-
+\begin{frame} \frametitle{first frame with regular content}
 here's stuff on page 1
 \end{frame}
 \begin{speakernote}
 oh my
 
 some notes. yes, this is verbatim: \foo # \\ $ 
-but Python's xml parser doesn't like ampersands
+ TeX doesn't mind ampersands here, but bare ampersands aren't valid XML
+-- use "&amp;"
 \end{speakernote}
-% $ 
+% $
 
 \begin{frame} \frametitle{xyz}
 lorem ipsum
@@ -66,13 +68,30 @@ lorem ipsum
 some text for the second part of the frame
 \end{frame}
 \begin{speakernote}
-  some stuff after the frame
+  some stuff after the frame with two overlays
+\end{speakernote}
+
+\begin{frame}
+  just a regular ol' frame
+\end{frame}
+\begin{speakernote}
+  just a regular ol' note
+\end{speakernote}
+
+\begin{frame}
+  one
+  \pause
+  two
+  \pause
+  three
+\end{frame}
+\begin{speakernote}
+  something about the frame with three overlays
 \end{speakernote}
 
 \end{document}
 
 %%% Local Variables: 
 %%% mode: latex
-%%% eval: (folding-mode)
 %%% TeX-PDF-mode: t
 %%% End: 

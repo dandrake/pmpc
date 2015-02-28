@@ -3,6 +3,10 @@ Entire thing enclosed in <notes>.
 
 Each <note> needs a slide attribute which corresponds to the 0-based
 page number in the PDF.
+
+Since ampersands are escape characters in XML, Python's parser won't
+accept anything with a bare "&" (outside of comments!); write &amp; if
+you really want & in your notes.
 -->
 <notes>
 <note slide="0">

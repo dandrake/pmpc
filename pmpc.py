@@ -225,7 +225,7 @@ class Presenter(Tkinter.Frame):
 
 def main():
     root = Tkinter.Tk()
-    root.geometry("800x600+100+100")
+    root.geometry("1024x600+100+100")
     app = Presenter(sys.argv[1], root)
     root.mainloop()  
 
