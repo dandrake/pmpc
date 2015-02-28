@@ -21,7 +21,7 @@ cairo & Tkinter: http://stackoverflow.com/a/26189022
 
 colors stolen from http://ethanschoonover.com/solarized
 
-
+http://www.ferg.org/thinking_in_tkinter/tt100_py.txt
 """
 import sys
 import os.path
@@ -32,6 +32,7 @@ import PIL.Image, PIL.ImageTk
 import cairo
 import subprocess
 import poppler
+import time
 
 def parse_notes(fn):
     ret = collections.defaultdict(lambda: '')
@@ -116,10 +117,21 @@ class Presenter(Tkinter.Frame):
         self.note.set('1/{}: '.format(self.nslides) + self.notes[0])
         self.do_msg()
 
+        # dummy just to get initial UI arrangement
+        self.label = Tkinter.Label(self)
+        self.label.pack(anchor='ne') #side=Tkinter.RIGHT, anchor='n')
+
+        self.timer = Tkinter.Label(self, text="hit `t' to start timer",
+                                   font=('Helvetica', 20, 'bold'),
+                                   background='#002b36',
+                                   fg='#eee8d5')
+        self.timer.pack(anchor='center')
+        self.start_time = 0
+
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.slide_size[0], self.slide_size[1])
         self.context = cairo.Context(self.surface)
-
         self.shownote()
+
         self.focus_get()
         self.bind_all("<Key>", self.onKeyPressed)
 
@@ -133,37 +145,42 @@ class Presenter(Tkinter.Frame):
             # first time, just keep going
             pass
         width = max(500, self.winfo_width() - self.slide_size[0] - 10)
-        print width
         self.msg = Tkinter.Message(self, textvariable=self.note,
                                    font=('Helvetica', self.textsize, 'bold'),
                                    background='#002b36',
                                    fg='#eee8d5',
                                    width=width,
                                    anchor='nw')
-        print self.winfo_width()
         self.msg.pack(side=Tkinter.LEFT, fill=Tkinter.BOTH, anchor='nw', expand=1)
 
     def shownote(self):
-        # TODO: on window resize, adjust width of the Message 
+        # TODO: on window resize, adjust width of the Message; right now
+        # only done on text resize
         # print 'width:', self.winfo_width()
         self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.index_to_note_num[self.slide]])
 
-        try:
-            self.label.pack_forget()
-        except AttributeError:
-            # first time, just keep going
-            pass
+        self.label.pack_forget()
+        self.timer.pack_forget()
+
         if self.slide < self.nslides - 1:
             self.next_page = self.document.get_page(self.slide + 1)
             self.next_page.render(self.context)
             self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
 
             self.label = Tkinter.Label(self, image=self._image_ref)
-            self.label.pack(side=Tkinter.RIGHT, anchor='n')
+            self.label.pack(anchor='ne') #side=Tkinter.RIGHT, anchor='n')
         else:
             # no slide to preview...don't display anything
             pass
+
+        self.timer.pack(anchor='center')
+
         self.pack(fill=Tkinter.BOTH, expand=1)
+
+    def tick(self):
+        t = int(time.time() - self.start_time)
+        self.timer.configure(text='{}:{:02}'.format(t / 60, t % 60))
+        self.timer.after(1000, self.tick)
 
     def onKeyPressed(self, e): 
         key = e.keysym
@@ -201,6 +218,10 @@ class Presenter(Tkinter.Frame):
         # state 4 is ctrl held down: http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/event-handlers.html
         if key == 'w' and e.state == 4:
             sys.exit(0)
+        if key == 't':
+            if self.start_time == 0:
+                self.start_time = time.time()
+            self.tick()
 
 def main():
     root = Tkinter.Tk()
