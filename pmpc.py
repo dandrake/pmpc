@@ -19,8 +19,6 @@ nope, let's do mupdf; evince seems to not listen to keypresses when the window i
 
 cairo & Tkinter: http://stackoverflow.com/a/26189022
 
-colors stolen from http://ethanschoonover.com/solarized
-
 http://www.ferg.org/thinking_in_tkinter/tt100_py.txt
 """
 import sys
@@ -33,6 +31,10 @@ import cairo
 import subprocess
 import poppler
 import time
+
+# stolen from http://ethanschoonover.com/solarized
+BG = '#002b36'
+FG = '#eee8d5'
 
 def parse_notes(fn):
     ret = collections.defaultdict(lambda: '')
@@ -108,7 +110,7 @@ class Presenter(Tkinter.Frame):
         # store digits so you can re-sync slides & pdf
         self.digits = ''
 
-        Tkinter.Frame.__init__(self, parent, background='#002b36')
+        Tkinter.Frame.__init__(self, parent, background=BG)
         self.textsize = 20
         parent.title('Presenting {}'.format(self.pdf))
 
@@ -123,8 +125,8 @@ class Presenter(Tkinter.Frame):
 
         self.timer = Tkinter.Label(self, text="hit `t' to start timer",
                                    font=('Helvetica', 20, 'bold'),
-                                   background='#002b36',
-                                   fg='#eee8d5')
+                                   background=BG,
+                                   fg=FG)
         self.timer.pack(anchor='center')
         self.start_time = 0
 
@@ -147,8 +149,8 @@ class Presenter(Tkinter.Frame):
         width = max(500, self.winfo_width() - self.slide_size[0] - 10)
         self.msg = Tkinter.Message(self, textvariable=self.note,
                                    font=('Helvetica', self.textsize, 'bold'),
-                                   background='#002b36',
-                                   fg='#eee8d5',
+                                   background=BG,
+                                   fg=FG,
                                    width=width,
                                    anchor='nw')
         self.msg.pack(side=Tkinter.LEFT, fill=Tkinter.BOTH, anchor='nw', expand=1)
