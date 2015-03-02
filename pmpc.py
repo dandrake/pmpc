@@ -114,7 +114,7 @@ class Presenter(Tkinter.Frame):
         self.textsize = 20
         parent.title('Presenting {}'.format(self.pdf))
 
-        self.notes[0] = "\nDo 'f', then 'H' to fullscreen mupdf.\n" + self.notes[0]
+        self.notes[0] = "\nDo `f', then `W' to fullscreen mupdf.\n" + self.notes[0]
         self.note = Tkinter.StringVar()
         self.note.set('1/{}: '.format(self.nslides) + self.notes[0])
         self.do_msg()
@@ -124,7 +124,7 @@ class Presenter(Tkinter.Frame):
         self.label.pack(anchor='ne') #side=Tkinter.RIGHT, anchor='n')
 
         self.timer = Tkinter.Label(self, text="hit `t' to start timer",
-                                   font=('Helvetica', 20, 'bold'),
+                                   font=('Helvetica', 32, 'bold'),
                                    background=BG,
                                    fg=FG)
         self.timer.pack(anchor='center')
@@ -224,6 +224,14 @@ class Presenter(Tkinter.Frame):
             if self.start_time == 0:
                 self.start_time = time.time()
             self.tick()
+        if key == 'Home':
+            self.slide = 0
+            subprocess.call('/usr/bin/xdotool search mupdf key g'.split())
+            self.shownote()
+        if key == 'End':
+            self.slide = self.nslides - 1
+            subprocess.call('/usr/bin/xdotool search mupdf key G'.split())
+            self.shownote()
 
 def main():
     root = Tkinter.Tk()
