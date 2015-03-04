@@ -43,6 +43,11 @@ def parse_notes(fn):
     except IOError:
         ret[0] = '\nno file {}!'.format(fn)
         return ret
+    except xml.etree.ElementTree.ParseError:
+        print "Error parsing {}!".format(fn)
+        print "Do you have a bare & somewhere? Change it to '&amp;'."
+        sys.exit(1)
+
     # normalize the notes: each starts with one \n. Might experiment
     # with: remove common leading whitespace, remove single \n's (let
     # the presenter do the line breaks). (But are those two incompatible?)
