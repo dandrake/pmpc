@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """display speaker notes
 
 +/- keys to adjust text size
