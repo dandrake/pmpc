@@ -79,6 +79,8 @@ overlays and not others.
 
 # ideas, todo
 
+combine multiple <note> elements with the same slide attribute
+
 put all the LaTeX support stuff in a .sty file
 
 allow multiple <note>s for a single slide, which we'll concatenate.
