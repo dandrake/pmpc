@@ -37,6 +37,16 @@ import time
 BG = '#002b36'
 FG = '#eee8d5'
 
+def join_with_blank_line(s, t):
+    """
+    for concatenating multiple <note> elements: this joins two strings
+    with a blank line (\n\n); if either is empty, just returns s+t.
+    """
+    if s == '' or t == '':
+        return s + t
+    else:
+        return s.rstrip('\n') + '\n\n' + t.lstrip('\n')
+
 def parse_notes(fn):
     ret = collections.defaultdict(lambda: '')
     try:
@@ -44,16 +54,19 @@ def parse_notes(fn):
     except IOError:
         ret[0] = '\nno file {}!'.format(fn)
         return ret
-    except xml.etree.ElementTree.ParseError:
-        print "Error parsing {}!".format(fn)
-        print "Do you have a bare & somewhere? Change it to '&amp;'."
+    except ET.ParseError as exc:
+        print 'Parse error:'
+        print exc
+        print "Do you have a bare & or < somewhere? Change it to '&amp;' or '&lt;'."
         sys.exit(1)
 
-    # normalize the notes: each starts with one \n. Might experiment
-    # with: remove common leading whitespace, remove single \n's (let
-    # the presenter do the line breaks). (But are those two incompatible?)
+    # normalize the notes: each starts with one \n, join multiple
+    # <note>s for the same slide. Might experiment with: remove common
+    # leading whitespace, remove single \n's (let the presenter do the
+    # line breaks). (But are those two incompatible?)
     for note in notes:
-        ret[int(note.attrib['slide'])] = '\n' + note.text.lstrip('\n')
+        i = int(note.attrib['slide'])
+        ret[i] = '\n' + join_with_blank_line(ret[i], note.text).lstrip('\n')
     return ret
 
 def parse_indices_labels(labels):
@@ -87,8 +100,8 @@ def parse_indices_labels(labels):
     label_to_index = {}
     for n, label in enumerate(labels):
         label_to_index[label] = n
-    # now we have a mapping from page labels to the last page index with that page label.
-    # compose that with the index->label mapping:
+    # Now we have a mapping from page labels to the last page index with
+    # that page label. Compose that with the index->label mapping:
     index_to_note_num = {}
     for n, label in enumerate(labels):
         index_to_note_num[n] = label_to_index[label]

@@ -8,9 +8,9 @@ Since ampersands are escape characters in XML, Python's parser won't
 accept anything with a bare "&" (outside of comments!); write &amp; if
 you really want & in your notes.
 
-Same thing goes for < -- use &lt; if you really want to see a less-than
-symbol. (Strictly speaking, XML allows bare > symbols, so you're okay
-there, but it is good practice to use &gt; instead.)
+Same thing goes for <: use &lt; if you really want to see a
+less-than symbol. (Strictly speaking, XML allows bare > symbols, so
+you're okay there, but it is good practice to use &gt; instead.)
 -->
 <notes>
 <note slide="0">
