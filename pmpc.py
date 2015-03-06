@@ -239,6 +239,10 @@ class Presenter(Tkinter.Frame):
             subprocess.call('/usr/bin/xdotool search mupdf key G'.split())
             self.shownote()
 
+        if key == 'a':
+            subprocess.call('/usr/bin/xdotool search iclicker windowfocus key ctrl+g'.split())
+            subprocess.call('/usr/bin/xdotool search Presenting windowactivate'.split())
+
 def main():
     root = Tkinter.Tk()
     root.geometry("1024x600+100+100")
