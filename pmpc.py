@@ -107,11 +107,10 @@ def parse_indices_labels(labels):
         index_to_note_num[n] = label_to_index[label]
     return index_to_note_num
 
-class Presenter(Tkinter.Frame):
+class PoorMansPresenterConsole(Tkinter.Frame):
     def __init__(self, fn, parent):
         fn = os.path.splitext(fn)[0]
         self.notes = parse_notes(fn + '.notes.xml')
-
         self.pdf = fn + '.pdf'
 
         self.slide = 0
@@ -120,22 +119,26 @@ class Presenter(Tkinter.Frame):
         self.index_to_note_num = parse_indices_labels([
             self.document.get_page(n).get_label() for n in range(self.nslides)])
 
-        self.next_page = self.document.get_page(self.slide + 1)
-        self.slide_size = tuple(int(_) for _ in self.next_page.get_size())
-        self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
+        Tkinter.Frame.__init__(self, parent, background=BG)
 
         self.nextkeys = ['j', 'J', 'Right', 'Down', 'Next', 'space']
         self.prevkeys = ['k', 'K', 'Left', 'Up', 'Prior', 'BackSpace']
         # store digits so you can re-sync slides & pdf
         self.digits = ''
 
-        Tkinter.Frame.__init__(self, parent, background=BG)
         self.textsize = 20
-        parent.title('Presenting {}'.format(self.pdf))
 
-        self.notes[0] = "\nDo `f', then `W' to fullscreen mupdf.\n" + self.notes[0]
         self.note = Tkinter.StringVar()
-        self.note.set('1/{}: '.format(self.nslides) + self.notes[0])
+
+        self.thumbnail = self.get_thumbnail_page()
+
+    def ui_init(self):
+        """
+        Do those UI initialization tasks that can't be done unless we
+        know whether we're presenting or rehearsing.
+        """
+        self.slide_size = tuple(int(_) for _ in self.thumbnail.get_size())
+        self.set_note()
         self.do_msg()
 
         # dummy just to get initial UI arrangement
@@ -155,6 +158,24 @@ class Presenter(Tkinter.Frame):
 
         self.focus_get()
         self.bind_all("<Key>", self.onKeyPressed)
+
+    def get_thumbnail_page(self):
+        """
+        This returns a Poppler page object for the slide that will get
+        thumbnailed. The idea is that we subclass this and
+        either redefine this function to return the next slide (for
+        presenting) or the current slide (for rehearsing).
+        """
+        pass
+
+    def set_note(self):
+        """
+        Similar to above: this just sets the text of the note, but the
+        Rehearser overrides this to add a reminder that you're
+        rehearsing.
+        """
+        self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) +
+                      self.notes[self.index_to_note_num[self.slide]])
 
     def do_msg(self):
         """
@@ -178,21 +199,18 @@ class Presenter(Tkinter.Frame):
         # TODO: on window resize, adjust width of the Message; right now
         # only done on text resize
         # print 'width:', self.winfo_width()
-        self.note.set('{}/{}: '.format(self.slide + 1, self.nslides) + self.notes[self.index_to_note_num[self.slide]])
+        self.set_note()
 
         self.label.pack_forget()
         self.timer.pack_forget()
 
-        if self.slide < self.nslides - 1:
-            self.next_page = self.document.get_page(self.slide + 1)
-            self.next_page.render(self.context)
+        self.thumbnail = self.get_thumbnail_page()
+        if self.thumbnail is not None:
+            self.thumbnail.render(self.context)
             self._image_ref = PIL.ImageTk.PhotoImage(PIL.Image.frombuffer("RGBA", self.slide_size, self.surface.get_data(), "raw", "BGRA", 0, 1))
 
             self.label = Tkinter.Label(self, image=self._image_ref)
             self.label.pack(anchor='ne') #side=Tkinter.RIGHT, anchor='n')
-        else:
-            # no slide to preview...don't display anything
-            pass
 
         self.timer.pack(anchor='center')
 
@@ -256,10 +274,48 @@ class Presenter(Tkinter.Frame):
             subprocess.call('/usr/bin/xdotool search iclicker windowfocus key ctrl+g'.split())
             subprocess.call('/usr/bin/xdotool search Presenting windowactivate'.split())
 
+class Presenter(PoorMansPresenterConsole):
+    def __init__(self, fn, parent):
+        PoorMansPresenterConsole.__init__(self, fn, parent)
+        parent.title('Presenting {}'.format(self.pdf))
+
+        self.notes[0] = "\nDo `f', then `W' to fullscreen mupdf.\n" + self.notes[0]
+
+        self.ui_init()
+        self.mupdf_pid = subprocess.Popen(["/usr/bin/mupdf", self.pdf]).pid
+
+
+    def get_thumbnail_page(self):
+        if self.slide < self.nslides - 1:
+            return self.document.get_page(self.slide + 1)
+        else:
+            return None
+
+class Rehearser(PoorMansPresenterConsole):
+    def __init__(self, fn, parent):
+        PoorMansPresenterConsole.__init__(self, fn, parent)
+        parent.title('Rehearsing {}'.format(self.pdf))
+
+        self.ui_init()
+
+    def get_thumbnail_page(self):
+        print 'self.slide: {}; label is {}'.format(self.slide, self.document.get_page(self.slide).get_label())
+        return self.document.get_page(self.slide)
+
+    def set_note(self):
+        self.note.set('Rehearsing {}/{}: '.format(self.slide + 1, self.nslides) +
+                      self.notes[self.index_to_note_num[self.slide]])
+
 def main():
     root = Tkinter.Tk()
     root.geometry("1024x600+100+100")
-    app = Presenter(sys.argv[1], root)
+    if 'rehearse' in sys.argv[0]:
+        print 'rehearsing!'
+        Thing = Rehearser
+    else:
+        print 'presenting!'
+        Thing = Presenter
+    app = Thing(sys.argv[1], root)
     root.mainloop()  
 
 if __name__ == '__main__':
