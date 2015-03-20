@@ -12,7 +12,7 @@
 \openoutputfile{\jobname.notes.xml}{speakernotes}
 
 % necessary top bits
-\addtostream{speakernotes}{<notes>}
+\addtostream{speakernotes}{<?xml version="1.0" encoding="UTF-8"?><notes>}
 
 \usepackage{verbatim}
 
@@ -71,6 +71,10 @@ some text for the second part of the frame
 \end{frame}
 \begin{speakernote}
   some stuff after the frame with two overlays
+
+btw, utf-8 text should be okay: λ ⇒ ∞ ↔
+
+and entity references are ok too: &#955;
 \end{speakernote}
 
 \begin{frame}
