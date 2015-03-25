@@ -244,7 +244,7 @@ class Presenter(Tkinter.Frame):
                     subprocess.call('/usr/bin/xdotool search mupdf type --window %1 {}g'.format(n+1).split())
             self.digits = ''
         # state 4 is ctrl held down: http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/event-handlers.html
-        if key == 'w' and e.state == 4:
+        if key == 'w' and e.state & 4 == 4:
             sys.exit(0)
         if key == 't':
             if self.start_time == 0:
