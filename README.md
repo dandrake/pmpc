@@ -40,10 +40,18 @@ It's easy enough to read the code and figure it out, but:
 
 * Go to first slide: home. (Last slide: end.)
 
-* Change notes to slide N: "Ng" -- for example, to display the notes for
-  slide 12, type "12g". This won't change the PDF viewer; this is for
-  re-synchronizing your notes to the viewer if they somehow get
-  unsync'ed.
+* Change notes and/or viewer to slide X. There are three commands: "n"
+  for notes, "v" for viewer, and "b" for both. Type "Xn" to change the
+  notes to slide X -- for example, to display the notes for
+  slide 12, type "12n". Doing "v" instead of "n" changes the PDF viewer
+  but not the notes, which seems strange but it's there if you want, and
+  "b" will change both the notes and the viewer -- very nice for jumping
+  to another point in your presentation.
+
+  If you screw up the digits -- maybe you type a number, then wonder if
+  you fat-fingered it or something -- you can reset the digits by typing
+  at least three zeros. (If you have a 1000-page presentation and want
+  to jump to page 1000, you are out of luck.)
 
 * Quit: Ctrl-W. The PDF viewer will stay; you have to close that
   yourself. (Make The User Do It, remember?)

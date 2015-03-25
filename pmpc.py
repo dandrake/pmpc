@@ -227,14 +227,21 @@ class Presenter(Tkinter.Frame):
         if key in [str(n) for n in range(10)]:
             self.digits += key
             print 'digits now', self.digits
-        if key == 'g':
+            if self.digits[-3:] == '000':
+                print 'resetting digits...'
+                self.digits = ''
+        # resync _n_otes, _v_iewer, or _b_oth
+        if key in ['n', 'v', 'b']:
             try:
                 n = int(self.digits.lstrip('0')) - 1
             except ValueError:
                 return
             if 0 <= n < self.nslides:
-                self.slide = n
-                self.shownote()
+                if key in ['n', 'b']:
+                    self.slide = n
+                    self.shownote()
+                if key in ['v', 'b']:
+                    subprocess.call('/usr/bin/xdotool search mupdf type --window %1 {}g'.format(n+1).split())
             self.digits = ''
         # state 4 is ctrl held down: http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/event-handlers.html
         if key == 'w' and e.state == 4:
